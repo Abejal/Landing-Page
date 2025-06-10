@@ -65,6 +65,37 @@ function useTypingAnimation(texts: string[], speed = 100, deleteSpeed = 50, paus
   return { displayText, isTyping }
 }
 
+// Intersection Observer hook for scroll animations
+function useIntersectionObserver(options = {}) {
+  const [isIntersecting, setIsIntersecting] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsIntersecting(entry.isIntersecting)
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "50px",
+        ...options,
+      },
+    )
+
+    if (ref.current) {
+      observer.observe(ref.current)
+    }
+
+    return () => {
+      if (ref.current) {
+        observer.unobserve(ref.current)
+      }
+    }
+  }, [])
+
+  return [ref, isIntersecting] as const
+}
+
 // Optimized lazy loading image component
 function LazyImage({
   src,
@@ -78,13 +109,13 @@ function LazyImage({
 
   return (
     <div className="relative">
-      {isLoading && <div className={`absolute inset-0 bg-gray-800 animate-pulse ${className}`}></div>}
+      {isLoading && <div className={`absolute inset-0 bg-gray-800 animate-pulse rounded-full ${className}`}></div>}
       <Image
         src={src || "/placeholder.svg"}
         alt={alt}
         width={width}
         height={height}
-        className={`${className} transition-opacity duration-300 ${isLoading ? "opacity-0" : "opacity-100"}`}
+        className={`${className} transition-all duration-500 ${isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
         onLoad={() => setIsLoading(false)}
         onError={() => {
           setHasError(true)
@@ -94,8 +125,8 @@ function LazyImage({
         priority={false}
       />
       {hasError && (
-        <div className={`${className} bg-gray-800 flex items-center justify-center text-gray-400`}>
-          Failed to load image
+        <div className={`${className} bg-gray-800 flex items-center justify-center text-gray-400 rounded-full`}>
+          <span className="text-xs">No Image</span>
         </div>
       )}
     </div>
@@ -209,6 +240,32 @@ function MouseFollowingParticles() {
   return (
     <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" style={{ background: "transparent" }} />
   )
+}
+
+// Animated counter component
+function AnimatedCounter({ end, duration = 2000 }: { end: number; duration?: number }) {
+  const [count, setCount] = useState(0)
+  const [ref, isIntersecting] = useIntersectionObserver()
+
+  useEffect(() => {
+    if (!isIntersecting) return
+
+    let startTime: number
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime
+      const progress = Math.min((currentTime - startTime) / duration, 1)
+
+      setCount(Math.floor(progress * end))
+
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      }
+    }
+
+    requestAnimationFrame(animate)
+  }, [isIntersecting, end, duration])
+
+  return <span ref={ref}>{count}</span>
 }
 
 export default function ServicesLandingPage() {
@@ -328,7 +385,35 @@ export default function ServicesLandingPage() {
       role: "E-commerce Owner",
       content: "The e-commerce solution increased our sales by 250%. Outstanding work!",
       rating: 5,
-      avatar: "/lisa-wang-new.png",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face",
+    },
+    {
+      name: "Ahmad Razak",
+      role: "Restaurant Owner",
+      content: "The online ordering system revolutionized our business during the pandemic. Sales doubled!",
+      rating: 5,
+      avatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&h=150&fit=crop&crop=face",
+    },
+    {
+      name: "Jennifer Lee",
+      role: "HR Manager",
+      content: "The resume makeover was incredible. I got 5 interview calls in just one week!",
+      rating: 5,
+      avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&h=150&fit=crop&crop=face",
+    },
+    {
+      name: "Robert Kim",
+      role: "Tech Startup CEO",
+      content: "Afiq's technical expertise helped us avoid costly mistakes. Best investment we made!",
+      rating: 5,
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    },
+    {
+      name: "Priya Sharma",
+      role: "Freelance Designer",
+      content: "The portfolio website brought in 10x more clients. Professional and stunning design!",
+      rating: 5,
+      avatar: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&h=150&fit=crop&crop=face",
     },
   ]
 
@@ -370,12 +455,12 @@ export default function ServicesLandingPage() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-2xl font-bold text-white mb-2">
+          <div className="text-2xl font-bold text-white mb-2 animate-pulse">
             <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
               AfiqRohaizal
             </span>
           </div>
-          <p className="text-gray-400">Loading amazing experiences...</p>
+          <p className="text-gray-400 animate-pulse">Loading amazing experiences...</p>
         </div>
       </div>
     )
@@ -387,51 +472,26 @@ export default function ServicesLandingPage() {
       <MouseFollowingParticles />
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-sm border-b border-white/10">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-sm border-b border-white/10 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-white transform hover:scale-105 transition-transform duration-200">
               <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                 AfiqRohaizal
               </span>
             </div>
 
             <div className="hidden md:flex space-x-8">
-              <a
-                href="#services"
-                className={`text-sm hover:text-cyan-400 transition-colors duration-200 relative group ${activeSection === "services" ? "text-cyan-400" : "text-white/80"}`}
-              >
-                SERVICES
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-200 group-hover:w-full"></span>
-              </a>
-              <a
-                href="#portfolio"
-                className={`text-sm hover:text-cyan-400 transition-colors duration-200 relative group ${activeSection === "portfolio" ? "text-cyan-400" : "text-white/80"}`}
-              >
-                PORTFOLIO
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-200 group-hover:w-full"></span>
-              </a>
-              <a
-                href="#about"
-                className={`text-sm hover:text-cyan-400 transition-colors duration-200 relative group ${activeSection === "about" ? "text-cyan-400" : "text-white/80"}`}
-              >
-                ABOUT
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-200 group-hover:w-full"></span>
-              </a>
-              <a
-                href="#testimonials"
-                className={`text-sm hover:text-cyan-400 transition-colors duration-200 relative group ${activeSection === "testimonials" ? "text-cyan-400" : "text-white/80"}`}
-              >
-                TESTIMONIALS
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-200 group-hover:w-full"></span>
-              </a>
-              <a
-                href="#contact"
-                className={`text-sm hover:text-cyan-400 transition-colors duration-200 relative group ${activeSection === "contact" ? "text-cyan-400" : "text-white/80"}`}
-              >
-                CONTACT
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-200 group-hover:w-full"></span>
-              </a>
+              {["services", "portfolio", "about", "testimonials", "contact"].map((section) => (
+                <a
+                  key={section}
+                  href={`#${section}`}
+                  className={`text-sm hover:text-cyan-400 transition-all duration-300 relative group transform hover:scale-105 ${activeSection === section ? "text-cyan-400" : "text-white/80"}`}
+                >
+                  {section.toUpperCase()}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-cyan-400 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+              ))}
             </div>
 
             <div className="hidden md:flex">
@@ -439,14 +499,14 @@ export default function ServicesLandingPage() {
                 href="https://wa.me/60162673423"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-medium px-6 py-2 rounded-full text-sm flex items-center transition-all duration-200 transform hover:scale-105"
+                className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-medium px-6 py-2 rounded-full text-sm flex items-center transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/25"
               >
                 CONTACT ME
               </a>
             </div>
 
             <button
-              className="md:hidden text-white hover:text-cyan-400 transition-colors duration-200"
+              className="md:hidden text-white hover:text-cyan-400 transition-all duration-300 transform hover:scale-110"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -456,48 +516,24 @@ export default function ServicesLandingPage() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-black/95 backdrop-blur-sm border-t border-white/10">
+          <div className="md:hidden bg-black/95 backdrop-blur-sm border-t border-white/10 animate-in slide-in-from-top duration-300">
             <div className="px-4 py-4 space-y-3">
-              <a
-                href="#services"
-                className="block text-white hover:text-cyan-400 py-2 text-sm transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                SERVICES
-              </a>
-              <a
-                href="#portfolio"
-                className="block text-white hover:text-cyan-400 py-2 text-sm transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                PORTFOLIO
-              </a>
-              <a
-                href="#about"
-                className="block text-white hover:text-cyan-400 py-2 text-sm transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                ABOUT
-              </a>
-              <a
-                href="#testimonials"
-                className="block text-white hover:text-cyan-400 py-2 text-sm transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                TESTIMONIALS
-              </a>
-              <a
-                href="#contact"
-                className="block text-white hover:text-cyan-400 py-2 text-sm transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                CONTACT
-              </a>
+              {["services", "portfolio", "about", "testimonials", "contact"].map((section, index) => (
+                <a
+                  key={section}
+                  href={`#${section}`}
+                  className="block text-white hover:text-cyan-400 py-2 text-sm transition-all duration-300 transform hover:translate-x-2"
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {section.toUpperCase()}
+                </a>
+              ))}
               <a
                 href="https://wa.me/60162673423"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-medium px-4 py-3 rounded-xl text-sm mt-4 text-center transition-all duration-200"
+                className="block bg-gradient-to-r from-cyan-500 to-blue-500 text-black font-medium px-4 py-3 rounded-xl text-sm mt-4 text-center transition-all duration-300 transform hover:scale-105"
                 onClick={() => setIsMenuOpen(false)}
               >
                 CONTACT ME
@@ -511,8 +547,8 @@ export default function ServicesLandingPage() {
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 z-10">
         <div className="max-w-7xl mx-auto">
           <div className="relative grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full">
+            <div className="space-y-8 animate-in fade-in-50 slide-in-from-left duration-1000">
+              <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full animate-pulse">
                 PROFESSIONAL SERVICES
               </div>
               <h1 className="text-5xl md:text-7xl font-bold leading-tight">
@@ -526,28 +562,28 @@ export default function ServicesLandingPage() {
                   ></span>
                 </span>
               </h1>
-              <p className="text-xl text-gray-300 max-w-xl leading-relaxed">
+              <p className="text-xl text-gray-300 max-w-xl leading-relaxed animate-in fade-in-50 slide-in-from-left duration-1000 delay-300">
                 Professional services to elevate your business and career. From custom apps to expert consulting, I
                 deliver excellence in every project.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 animate-in fade-in-50 slide-in-from-left duration-1000 delay-500">
                 <a
                   href="#services"
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black px-8 py-4 rounded-full font-medium flex items-center justify-center transition-all duration-200 group transform hover:scale-105 w-full sm:w-auto"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black px-8 py-4 rounded-full font-medium flex items-center justify-center transition-all duration-300 group transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/25 w-full sm:w-auto"
                 >
                   EXPLORE SERVICES
-                  <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-200" />
+                  <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                 </a>
                 <a
                   href="#contact"
-                  className="border border-white/20 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-white px-8 py-4 rounded-full font-medium flex items-center justify-center transition-all duration-200 transform hover:scale-105 w-full sm:w-auto"
+                  className="border border-white/20 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-white px-8 py-4 rounded-full font-medium flex items-center justify-center transition-all duration-300 transform hover:scale-105 w-full sm:w-auto"
                 >
                   GET IN TOUCH
                 </a>
               </div>
             </div>
-            <div className="relative">
-              <div className="relative bg-black/20 p-2 rounded-2xl transform hover:scale-105 transition-all duration-300">
+            <div className="relative animate-in fade-in-50 slide-in-from-right duration-1000 delay-200">
+              <div className="relative bg-black/20 p-2 rounded-2xl transform hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/20">
                 <LazyImage
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-06-09%20235519-ppX1nYlxW98imwgQQpKpLYKNdTi640.png"
                   alt="Dashboard Example"
@@ -561,11 +597,39 @@ export default function ServicesLandingPage() {
         </div>
       </section>
 
+      {/* Stats Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-white/10 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {[
+              { number: 50, label: "Projects Completed", suffix: "+" },
+              { number: 100, label: "Happy Clients", suffix: "%" },
+              { number: 24, label: "Hour Support", suffix: "/7" },
+              { number: 5, label: "Years Experience", suffix: "+" },
+            ].map((stat, index) => (
+              <div
+                key={index}
+                className="text-center group animate-in fade-in-50 slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="text-3xl md:text-4xl font-bold text-cyan-400 mb-2 group-hover:scale-110 transition-transform duration-300">
+                  <AnimatedCounter end={stat.number} />
+                  {stat.suffix}
+                </div>
+                <div className="text-gray-300 text-sm md:text-base group-hover:text-white transition-colors duration-300">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Services Section */}
       <section id="services" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-white/10 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4">
+          <div className="text-center mb-16 animate-in fade-in-50 slide-in-from-bottom duration-1000">
+            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4 animate-pulse">
               WHAT I OFFER
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Professional Services</h2>
@@ -578,28 +642,36 @@ export default function ServicesLandingPage() {
             {services.map((service, index) => (
               <div
                 key={index}
-                className="group relative bg-black/20 border border-white/10 rounded-2xl p-8 hover:bg-black/40 transition-all duration-300 transform hover:scale-105 h-full flex flex-col"
+                className="group relative bg-black/20 border border-white/10 rounded-2xl p-8 hover:bg-black/40 transition-all duration-500 transform hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/20 h-full flex flex-col animate-in fade-in-50 slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="relative flex flex-col h-full">
-                  <div className="text-cyan-400 mb-6 group-hover:scale-110 transition-transform duration-200">
+                  <div className="text-cyan-400 mb-6 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
                     {service.icon}
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-cyan-300 transition-colors duration-200">
+                  <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-cyan-300 transition-colors duration-300">
                     {service.title}
                   </h3>
-                  <p className="text-gray-300 mb-6 flex-grow">{service.description}</p>
-                  <div className="text-2xl font-bold text-cyan-400 mb-6">{service.price}</div>
+                  <p className="text-gray-300 mb-6 flex-grow group-hover:text-gray-200 transition-colors duration-300">
+                    {service.description}
+                  </p>
+                  <div className="text-2xl font-bold text-cyan-400 mb-6 group-hover:scale-105 transition-transform duration-300">
+                    {service.price}
+                  </div>
                   <ul className="space-y-2 mb-8 flex-grow">
                     {service.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center text-gray-300 text-sm">
-                        <CheckCircle className="w-4 h-4 text-cyan-400 mr-3 flex-shrink-0" />
+                      <li
+                        key={idx}
+                        className="flex items-center text-gray-300 text-sm group-hover:text-gray-200 transition-colors duration-300"
+                      >
+                        <CheckCircle className="w-4 h-4 text-cyan-400 mr-3 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" />
                         {feature}
                       </li>
                     ))}
                   </ul>
                   <a
                     href="#contact"
-                    className="inline-block w-full border border-white/20 hover:border-cyan-500 hover:bg-cyan-500/10 text-white py-3 rounded-xl font-medium text-center transition-all duration-200 transform hover:scale-105 mt-auto"
+                    className="inline-block w-full border border-white/20 hover:border-cyan-500 hover:bg-cyan-500/10 text-white py-3 rounded-xl font-medium text-center transition-all duration-300 transform hover:scale-105 hover:shadow-lg mt-auto"
                   >
                     Learn More
                   </a>
@@ -613,8 +685,8 @@ export default function ServicesLandingPage() {
       {/* Portfolio Section */}
       <section id="portfolio" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-white/10 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4">
+          <div className="text-center mb-16 animate-in fade-in-50 slide-in-from-bottom duration-1000">
+            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4 animate-pulse">
               MY WORK
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Featured Projects</h2>
@@ -625,29 +697,35 @@ export default function ServicesLandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {portfolioItems.map((item, index) => (
-              <div key={index} className="group relative overflow-hidden rounded-2xl">
-                <div className="relative bg-black/20 rounded-2xl h-full flex flex-col overflow-hidden transform group-hover:scale-105 transition-all duration-300">
+              <div
+                key={index}
+                className="group relative overflow-hidden rounded-2xl animate-in fade-in-50 slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 200}ms` }}
+              >
+                <div className="relative bg-black/20 rounded-2xl h-full flex flex-col overflow-hidden transform group-hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/20">
                   <div className="relative h-64 overflow-hidden">
                     <LazyImage
                       src={item.image || "/placeholder.svg"}
                       alt={item.title}
                       width={600}
                       height={400}
-                      className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
+                      className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
                   </div>
                   <div className="p-6 flex flex-col flex-grow">
-                    <h3 className="text-xl font-bold mb-2 group-hover:text-cyan-300 transition-colors duration-200">
+                    <h3 className="text-xl font-bold mb-2 group-hover:text-cyan-300 transition-colors duration-300">
                       {item.title}
                     </h3>
-                    <p className="text-gray-300 text-sm mb-4 flex-grow">{item.description}</p>
+                    <p className="text-gray-300 text-sm mb-4 flex-grow group-hover:text-gray-200 transition-colors duration-300">
+                      {item.description}
+                    </p>
                     <a
                       href="#contact"
-                      className="inline-flex items-center text-cyan-400 hover:text-cyan-300 transition-colors duration-200 group/link"
+                      className="inline-flex items-center text-cyan-400 hover:text-cyan-300 transition-all duration-300 group/link transform hover:translate-x-1"
                     >
                       View Details
-                      <ChevronRight className="ml-1 w-4 h-4 group-hover/link:translate-x-1 transition-transform duration-200" />
+                      <ChevronRight className="ml-1 w-4 h-4 group-hover/link:translate-x-1 transition-transform duration-300" />
                     </a>
                   </div>
                 </div>
@@ -660,8 +738,8 @@ export default function ServicesLandingPage() {
       {/* About Section */}
       <section id="about" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-white/10 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4">
+          <div className="text-center mb-16 animate-in fade-in-50 slide-in-from-bottom duration-1000">
+            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4 animate-pulse">
               WHY CHOOSE ME
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Expertise & Approach</h2>
@@ -687,23 +765,26 @@ export default function ServicesLandingPage() {
             ].map((item, index) => (
               <div
                 key={index}
-                className="group bg-black/20 border border-white/10 rounded-2xl p-8 hover:bg-black/40 transition-all duration-300 transform hover:scale-105"
+                className="group bg-black/20 border border-white/10 rounded-2xl p-8 hover:bg-black/40 transition-all duration-500 transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/20 animate-in fade-in-50 slide-in-from-bottom duration-1000"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-cyan-400 mb-4 group-hover:scale-110 transition-transform duration-200">
+                  <div className="text-4xl font-bold text-cyan-400 mb-4 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
                     {typeof item.icon === "string" ? item.icon : item.icon}
                   </div>
-                  <h3 className="text-white font-semibold mb-2 group-hover:text-cyan-300 transition-colors duration-200">
+                  <h3 className="text-white font-semibold mb-2 group-hover:text-cyan-300 transition-colors duration-300">
                     {item.title}
                   </h3>
-                  <p className="text-gray-300 text-sm">{item.desc}</p>
+                  <p className="text-gray-300 text-sm group-hover:text-gray-200 transition-colors duration-300">
+                    {item.desc}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="animate-in fade-in-50 slide-in-from-left duration-1000">
               <h3 className="text-3xl font-bold text-white mb-6">My Approach</h3>
               <p className="text-gray-300 mb-6 leading-relaxed">
                 I believe in delivering high-quality solutions that make a real difference for my clients. With a
@@ -715,8 +796,8 @@ export default function ServicesLandingPage() {
                 stay updated with the latest technologies and best practices to provide cutting-edge solutions.
               </p>
             </div>
-            <div className="relative">
-              <div className="relative bg-black/20 p-2 rounded-2xl transform hover:scale-105 transition-all duration-300">
+            <div className="relative animate-in fade-in-50 slide-in-from-right duration-1000 delay-300">
+              <div className="relative bg-black/20 p-2 rounded-2xl transform hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-cyan-500/20">
                 <LazyImage
                   src="https://images.unsplash.com/photo-1551650975-87deedd944c3?w=600&h=400&fit=crop"
                   alt="Modern developer workspace with multiple monitors showing code and applications"
@@ -733,8 +814,8 @@ export default function ServicesLandingPage() {
       {/* Testimonials Carousel */}
       <section id="testimonials" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-white/10 relative z-10">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4">
+          <div className="text-center mb-16 animate-in fade-in-50 slide-in-from-bottom duration-1000">
+            <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4 animate-pulse">
               CLIENT FEEDBACK
             </div>
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Success Stories</h2>
@@ -752,7 +833,7 @@ export default function ServicesLandingPage() {
               >
                 {testimonials.map((testimonial, index) => (
                   <div key={index} className="w-full flex-shrink-0">
-                    <div className="bg-black/20 border border-white/10 rounded-2xl p-8 mx-4">
+                    <div className="bg-black/20 border border-white/10 rounded-2xl p-8 mx-4 hover:bg-black/30 transition-all duration-300">
                       <div className="text-center">
                         <div className="relative w-20 h-20 mx-auto mb-6">
                           <LazyImage
@@ -765,7 +846,11 @@ export default function ServicesLandingPage() {
                         </div>
                         <div className="flex justify-center mb-4">
                           {[...Array(testimonial.rating)].map((_, i) => (
-                            <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                            <Star
+                              key={i}
+                              className="w-5 h-5 text-yellow-400 fill-current animate-pulse"
+                              style={{ animationDelay: `${i * 100}ms` }}
+                            />
                           ))}
                         </div>
                         <p className="text-gray-300 mb-6 italic text-lg leading-relaxed max-w-2xl mx-auto">
@@ -785,13 +870,13 @@ export default function ServicesLandingPage() {
             {/* Navigation Buttons */}
             <button
               onClick={prevTestimonial}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black p-3 rounded-full transition-all duration-200 transform hover:scale-110"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black p-3 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={nextTestimonial}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black p-3 rounded-full transition-all duration-200 transform hover:scale-110"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black p-3 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -802,7 +887,7 @@ export default function ServicesLandingPage() {
                 <button
                   key={index}
                   onClick={() => setCurrentTestimonial(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                  className={`w-3 h-3 rounded-full transition-all duration-300 transform hover:scale-125 ${
                     index === currentTestimonial ? "bg-cyan-400 scale-125" : "bg-white/30 hover:bg-white/50"
                   }`}
                 />
@@ -816,8 +901,8 @@ export default function ServicesLandingPage() {
       <section id="contact" className="py-20 px-4 sm:px-6 lg:px-8 border-t border-white/10 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div>
-              <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4">
+            <div className="animate-in fade-in-50 slide-in-from-left duration-1000">
+              <div className="inline-block bg-gradient-to-r from-cyan-500/20 to-blue-500/20 px-4 py-2 text-sm border border-cyan-500/30 rounded-full mb-4 animate-pulse">
                 GET IN TOUCH
               </div>
               <h2 className="text-4xl md:text-5xl font-bold mb-6">Let's Discuss Your Project</h2>
@@ -827,67 +912,50 @@ export default function ServicesLandingPage() {
               </p>
 
               <div className="space-y-6">
-                <div className="flex items-start group">
-                  <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 p-4 rounded-xl mr-4 group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all duration-200">
-                    <Mail className="w-6 h-6 text-cyan-400 group-hover:scale-110 transition-transform duration-200" />
+                {[
+                  {
+                    icon: Mail,
+                    label: "Email",
+                    value: "Afiqrohaizal00@gmail.com",
+                    href: "mailto:Afiqrohaizal00@gmail.com",
+                  },
+                  {
+                    icon: Linkedin,
+                    label: "LinkedIn",
+                    value: "Afiq Rohaizal",
+                    href: "https://www.linkedin.com/in/afiq-rohaizal-b6189929a",
+                  },
+                  { icon: Github, label: "GitHub", value: "Abejal", href: "https://github.com/Abejal" },
+                ].map((contact, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start group animate-in fade-in-50 slide-in-from-left duration-1000"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 p-4 rounded-xl mr-4 group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all duration-300 transform group-hover:scale-110">
+                      <contact.icon className="w-6 h-6 text-cyan-400 group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2 group-hover:text-cyan-300 transition-colors duration-300">
+                        {contact.label}
+                      </h3>
+                      <a
+                        href={contact.href}
+                        target={contact.href.startsWith("http") ? "_blank" : undefined}
+                        rel={contact.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                        className="text-cyan-400 hover:text-cyan-300 transition-colors duration-300 inline-flex items-center group-hover:translate-x-1 transform"
+                      >
+                        {contact.value}
+                        {contact.href.startsWith("http") && <ExternalLink className="w-4 h-4 ml-1" />}
+                      </a>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold mb-2 group-hover:text-cyan-300 transition-colors duration-200">
-                      Email
-                    </h3>
-                    <a
-                      href="mailto:Afiqrohaizal00@gmail.com"
-                      className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200"
-                    >
-                      Afiqrohaizal00@gmail.com
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start group">
-                  <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 p-4 rounded-xl mr-4 group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all duration-200">
-                    <Linkedin className="w-6 h-6 text-cyan-400 group-hover:scale-110 transition-transform duration-200" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2 group-hover:text-cyan-300 transition-colors duration-200">
-                      LinkedIn
-                    </h3>
-                    <a
-                      href="https://www.linkedin.com/in/afiq-rohaizal-b6189929a"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200 inline-flex items-center"
-                    >
-                      Afiq Rohaizal
-                      <ExternalLink className="w-4 h-4 ml-1" />
-                    </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start group">
-                  <div className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 p-4 rounded-xl mr-4 group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all duration-200">
-                    <Github className="w-6 h-6 text-cyan-400 group-hover:scale-110 transition-transform duration-200" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2 group-hover:text-cyan-300 transition-colors duration-200">
-                      GitHub
-                    </h3>
-                    <a
-                      href="https://github.com/Abejal"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-400 hover:text-cyan-300 transition-colors duration-200 inline-flex items-center"
-                    >
-                      Abejal
-                      <ExternalLink className="w-4 h-4 ml-1" />
-                    </a>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
-            <div className="relative">
-              <form className="relative bg-gradient-to-b from-cyan-500/5 to-blue-500/5 p-8 rounded-2xl border border-cyan-500/20">
+            <div className="relative animate-in fade-in-50 slide-in-from-right duration-1000 delay-300">
+              <form className="relative bg-gradient-to-b from-cyan-500/5 to-blue-500/5 p-8 rounded-2xl border border-cyan-500/20 hover:border-cyan-500/40 transition-all duration-300">
                 <div className="mb-6">
                   <label htmlFor="name" className="block text-sm font-medium mb-2 text-cyan-300">
                     Name
@@ -895,7 +963,7 @@ export default function ServicesLandingPage() {
                   <input
                     type="text"
                     id="name"
-                    className="w-full bg-black/20 border border-cyan-500/30 rounded-xl p-4 text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 placeholder-gray-400"
+                    className="w-full bg-black/20 border border-cyan-500/30 rounded-xl p-4 text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-300 placeholder-gray-400 hover:border-cyan-500/50"
                     placeholder="Your name"
                   />
                 </div>
@@ -906,7 +974,7 @@ export default function ServicesLandingPage() {
                   <input
                     type="email"
                     id="email"
-                    className="w-full bg-black/20 border border-cyan-500/30 rounded-xl p-4 text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 placeholder-gray-400"
+                    className="w-full bg-black/20 border border-cyan-500/30 rounded-xl p-4 text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-300 placeholder-gray-400 hover:border-cyan-500/50"
                     placeholder="Your email"
                   />
                 </div>
@@ -917,13 +985,13 @@ export default function ServicesLandingPage() {
                   <textarea
                     id="message"
                     rows={5}
-                    className="w-full bg-black/20 border border-cyan-500/30 rounded-xl p-4 text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-200 resize-none placeholder-gray-400"
+                    className="w-full bg-black/20 border border-cyan-500/30 rounded-xl p-4 text-white focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all duration-300 resize-none placeholder-gray-400 hover:border-cyan-500/50"
                     placeholder="Tell me about your project"
                   ></textarea>
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-medium py-4 rounded-xl transition-all duration-200 transform hover:scale-105"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black font-medium py-4 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/25"
                 >
                   SEND MESSAGE
                 </button>
@@ -937,8 +1005,8 @@ export default function ServicesLandingPage() {
       <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-gray-900 border-t border-white/10 relative z-10">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div className="md:col-span-2">
-              <div className="text-3xl font-bold text-white mb-4">
+            <div className="md:col-span-2 animate-in fade-in-50 slide-in-from-left duration-1000">
+              <div className="text-3xl font-bold text-white mb-4 transform hover:scale-105 transition-transform duration-300">
                 <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                   AfiqRohaizal
                 </span>
@@ -947,98 +1015,69 @@ export default function ServicesLandingPage() {
                 Professional services for the digital age. Transforming ideas into exceptional digital experiences.
               </p>
               <div className="flex space-x-4">
-                <a
-                  href="https://www.linkedin.com/in/afiq-rohaizal-b6189929a"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white/10 hover:bg-cyan-500/20 p-3 rounded-xl transition-all duration-200 transform hover:scale-110"
-                >
-                  <Linkedin className="w-5 h-5 text-cyan-400" />
-                </a>
-                <a
-                  href="https://github.com/Abejal"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white/10 hover:bg-cyan-500/20 p-3 rounded-xl transition-all duration-200 transform hover:scale-110"
-                >
-                  <Github className="w-5 h-5 text-cyan-400" />
-                </a>
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-white/10 hover:bg-cyan-500/20 p-3 rounded-xl transition-all duration-200 transform hover:scale-110"
-                >
-                  <Twitter className="w-5 h-5 text-cyan-400" />
-                </a>
+                {[
+                  { icon: Linkedin, href: "https://www.linkedin.com/in/afiq-rohaizal-b6189929a" },
+                  { icon: Github, href: "https://github.com/Abejal" },
+                  { icon: Twitter, href: "https://twitter.com" },
+                ].map((social, index) => (
+                  <a
+                    key={index}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-white/10 hover:bg-cyan-500/20 p-3 rounded-xl transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
+                  >
+                    <social.icon className="w-5 h-5 text-cyan-400" />
+                  </a>
+                ))}
               </div>
             </div>
 
-            <div>
+            <div className="animate-in fade-in-50 slide-in-from-bottom duration-1000 delay-200">
               <h3 className="text-white font-semibold mb-4">Services</h3>
               <ul className="space-y-2">
-                <li>
-                  <a href="#services" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    Web Development
-                  </a>
-                </li>
-                <li>
-                  <a href="#services" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    Mobile Apps
-                  </a>
-                </li>
-                <li>
-                  <a href="#services" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    UI/UX Design
-                  </a>
-                </li>
-                <li>
-                  <a href="#services" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    Consulting
-                  </a>
-                </li>
+                {["Web Development", "Mobile Apps", "UI/UX Design", "Consulting"].map((service, index) => (
+                  <li key={index}>
+                    <a
+                      href="#services"
+                      className="text-gray-400 hover:text-cyan-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    >
+                      {service}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
 
-            <div>
+            <div className="animate-in fade-in-50 slide-in-from-bottom duration-1000 delay-300">
               <h3 className="text-white font-semibold mb-4">Quick Links</h3>
               <ul className="space-y-2">
-                <li>
-                  <a href="#about" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="#portfolio" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    Portfolio
-                  </a>
-                </li>
-                <li>
-                  <a href="#testimonials" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    Testimonials
-                  </a>
-                </li>
-                <li>
-                  <a href="#contact" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                    Contact
-                  </a>
-                </li>
+                {["About", "Portfolio", "Testimonials", "Contact"].map((link, index) => (
+                  <li key={index}>
+                    <a
+                      href={`#${link.toLowerCase()}`}
+                      className="text-gray-400 hover:text-cyan-400 transition-all duration-300 transform hover:translate-x-1 inline-block"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center animate-in fade-in-50 slide-in-from-bottom duration-1000 delay-500">
             <p className="text-gray-500 text-sm mb-4 md:mb-0">© 2025 AfiqRohaizal. All rights reserved.</p>
             <div className="flex space-x-6 text-sm">
-              <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                Terms of Service
-              </a>
-              <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors duration-200">
-                Cookie Policy
-              </a>
+              {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((policy, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  className="text-gray-400 hover:text-cyan-400 transition-all duration-300 transform hover:translate-y-1"
+                >
+                  {policy}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -1047,7 +1086,7 @@ export default function ServicesLandingPage() {
       {/* Scroll to Top Button */}
       <button
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        className={`fixed bottom-8 right-8 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black p-3 rounded-full shadow-lg transition-all duration-200 transform hover:scale-110 z-50 ${scrollY > 500 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"}`}
+        className={`fixed bottom-8 right-8 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-black p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 hover:shadow-xl hover:shadow-cyan-500/25 z-50 ${scrollY > 500 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"}`}
       >
         <ArrowUp className="w-5 h-5" />
       </button>
